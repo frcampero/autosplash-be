@@ -4,6 +4,8 @@ const Order = require("../models/Order");
 const Payment = require("../models/Payment");
 const path = require("path"); // necesario para ruta local del logo
 
+const FRONTEND_BASE_URL =
+  process.env.FRONTEND_BASE_URL || "http://localhost:5173";
 const generateOrderPdf = async (req, res) => {
   try {
     const order = await Order.findById(req.params.id).populate("customerId");
@@ -13,7 +15,7 @@ const generateOrderPdf = async (req, res) => {
     const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
     const balance = order.total - totalPaid;
 
-    const trackingUrl = `http://localhost:5173/orders/${order._id}`;
+    const trackingUrl = `${FRONTEND_BASE_URL}/orders/${order._id}`;
     const qrDataURL = await QRCode.toDataURL(trackingUrl);
 
     const doc = new PDFDocument({ margin: 40 });
