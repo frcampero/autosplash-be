@@ -217,6 +217,47 @@ const updateOrder = async (req, res) => {
   }
 };
 
+const getDelayedOrders = async (req, res) => {
+  try {
+    const diasLimite = 1;
+    const limiteFecha = new Date();
+    limiteFecha.setDate(limiteFecha.getDate() - diasLimite);
+
+    const atrasadas = await Order.aggregate([
+      {
+        $match: {
+          createdAt: { $lte: limiteFecha },
+          status: { $nin: ["Completado", "Entregado"] }
+        }
+      },
+      {
+        $lookup: {
+          from: "customers",
+          localField: "customerId",
+          foreignField: "_id",
+          as: "cliente"
+        }
+      },
+      { $unwind: "$cliente" },
+      {
+        $project: {
+          nombre: {
+            $concat: ["$cliente.firstName", " ", "$cliente.lastName"]
+          },
+          estado: "$status",
+          fecha: "$createdAt"
+        }
+      },
+      { $sort: { createdAt: 1 } }
+    ]);
+
+    res.json(atrasadas);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+
 module.exports = {
   createOrder,
   getOrders,
@@ -226,4 +267,5 @@ module.exports = {
   getOrderStats,
   deleteOrder,
   updateOrder,
+  getDelayedOrders,
 };

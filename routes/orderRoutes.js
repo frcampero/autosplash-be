@@ -8,7 +8,8 @@ const {
   updateOrderNote,
   getOrderStats,
   deleteOrder,
-  updateOrder
+  updateOrder,
+  getDelayedOrders
 } = require('../controllers/orderController');
 
 const verifyToken = require('../middleware/authMiddleware');
@@ -18,6 +19,7 @@ const handleValidation = require('../middleware/handleValidation');
 router.post('/', verifyToken, validateOrder, handleValidation, createOrder);
 router.get('/stats/dashboard', verifyToken, getOrderStats);
 router.get('/', verifyToken, getOrders);
+router.get('/delayed', verifyToken, getDelayedOrders);
 router.get('/:id', verifyToken, getOrderById);
 router.put('/:id/status', verifyToken, updateOrderStatus);
 router.put('/:id/note', verifyToken, updateOrderNote);
