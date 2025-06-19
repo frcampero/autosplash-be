@@ -65,10 +65,7 @@ A full-featured RESTful API for managing orders, customers, and payments in a la
 
 ## 📍 To-do / Improvements
 
-- [ ] JWT authentication
-- [ ] Data validation with express-validator
 - [ ] Swagger API documentation
 - [ ] Image uploads (e.g., damaged clothes, tickets)
-- [ ] Deploy to Render or Railway
 
 ---

@@ -11,7 +11,6 @@ async function createUser() {
     // Verificamos si ya existe un usuario con ese email
     const existingUser = await User.findOne({ email: 'admin@autosplash.com' })
     if (existingUser) {
-      console.log('ℹ️ El usuario ya existe')
       process.exit()
     }
 
@@ -21,7 +20,6 @@ async function createUser() {
     })
 
     await user.save()
-    console.log('✅ Usuario admin creado correctamente')
     process.exit()
   } catch (err) {
     console.error('❌ Error al crear usuario:', err)
