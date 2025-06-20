@@ -1,5 +1,3 @@
-// createUser.js
-
 require('dotenv').config()
 const mongoose = require('mongoose')
 const User = require('./models/User')
@@ -8,7 +6,6 @@ async function createUser() {
   try {
     await mongoose.connect(process.env.MONGO_URI)
 
-    // Verificamos si ya existe un usuario con ese email
     const existingUser = await User.findOne({ email: 'admin@autosplash.com' })
     if (existingUser) {
       process.exit()

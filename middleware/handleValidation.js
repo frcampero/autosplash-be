@@ -1,4 +1,3 @@
-// middleware/handleValidation.js
 const { validationResult } = require('express-validator');
 
 const handleValidation = (req, res, next) => {
@@ -13,7 +12,7 @@ const handleValidation = (req, res, next) => {
     });
   }
 
-  next(); // Si no hay errores, continúa al controller
+  next();
 };
 
 module.exports = handleValidation;

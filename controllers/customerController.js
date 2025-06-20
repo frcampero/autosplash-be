@@ -3,7 +3,9 @@ const Order = require("../models/Order");
 const Payment = require("../models/Payment");
 const mongoose = require("mongoose");
 const ObjectId = mongoose.Types.ObjectId;
-// Crear cliente
+
+
+// Create customer
 const createCustomer = async (req, res) => {
   try {
     const { firstName, lastName, phone, email, address } = req.body;
@@ -21,7 +23,7 @@ const createCustomer = async (req, res) => {
   }
 };
 
-// Obtener todos los clientes
+// Get all customers
 const getCustomers = async (req, res) => {
   try {
     const customers = await Customer.find().sort({ createdAt: -1 });
@@ -31,7 +33,7 @@ const getCustomers = async (req, res) => {
   }
 };
 
-// Obtener cliente por ID
+// Get customer by ID
 const getCustomerById = async (req, res) => {
   try {
     const customer = await Customer.findById(req.params.id);
@@ -43,7 +45,7 @@ const getCustomerById = async (req, res) => {
   }
 };
 
-// Actualizar cliente
+// Update customer
 const updateCustomer = async (req, res) => {
   try {
     const updatedCustomer = await Customer.findByIdAndUpdate(
@@ -60,7 +62,7 @@ const updateCustomer = async (req, res) => {
   }
 };
 
-// Eliminar cliente
+// Delete customer
 const deleteCustomer = async (req, res) => {
   try {
     const customerId = req.params.id;
@@ -91,7 +93,7 @@ const deleteCustomer = async (req, res) => {
   }
 };
 
-// Clientes con más pedidos
+// Customers with the most orders
 const getTopCustomers = async (req, res) => {
   try {
     const top = await Payment.aggregate([

@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-const PriceItem = require("../models/PriceItem"); // 👈 ruta ajustada a partir de Seed/
+const PriceItem = require("../models/PriceItem");
 require("dotenv").config();
 
 const precios = [
@@ -22,7 +22,7 @@ const precios = [
 mongoose
   .connect(process.env.MONGO_URI)
   .then(async () => {
-    await PriceItem.deleteMany(); // opcional
+    await PriceItem.deleteMany();
     await PriceItem.insertMany(precios);
     console.log("✅ Precios insertados correctamente");
     process.exit();

@@ -1,5 +1,3 @@
-//Server Autosplash
-
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
@@ -22,7 +20,7 @@ app.use("/api/orders", require("./routes/orderRoutes"));
 app.use("/api/public", require("./routes/publicRoutes"));
 app.use("/api/payments", require("./routes/paymentRoutes"));
 app.use("/api/pdf", require("./routes/pdfRoutes"));
-app.use("/api/prices", require("./routes/priceRoutes")); // 👈 NUEVA RUTA
+app.use("/api/prices", require("./routes/priceRoutes"));
 
 //MongoDB Connection
 mongoose

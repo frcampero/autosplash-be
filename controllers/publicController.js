@@ -20,7 +20,6 @@ const getPublicOrder = async (req, res) => {
       customer: {
         firstName: order.customerId.firstName,
         lastName: order.customerId.lastName,
-        // Puedes agregar más campos si querés que el cliente los vea
       },
       payments: payments.map((p) => ({
         amount: p.amount,

@@ -1,4 +1,3 @@
-// middleware/orderValidator.js
 const { body } = require("express-validator");
 
 const validateOrder = [

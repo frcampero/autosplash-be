@@ -2,13 +2,13 @@ const Payment = require("../models/Payment");
 const ExcelJS = require("exceljs");
 const { recalculateOrderStatus } = require("../utils/orderUtils");
 
-// Crear pago
+// Create Payment
 const createPayment = async (req, res) => {
   console.log("Body recibido:", req.body);
   try {
     let { amount, method, orderId } = req.body;
 
-    // Asegurar que amount sea un número positivo válido
+    // Ensure that amount is a valid positive number
     const parsedAmount = parseFloat(
       String(amount).toString().replace(",", ".")
     );
@@ -37,7 +37,7 @@ const createPayment = async (req, res) => {
   }
 };
 
-// Obtener lista de pagos
+// Get payment list
 const getPayments = async (req, res) => {
   try {
     const { method, orderId, from, to, limit = 20, skip = 0 } = req.query;
@@ -70,7 +70,7 @@ const getPayments = async (req, res) => {
   }
 };
 
-// Obtener un pago por ID
+// Get paid by ID
 const getPaymentById = async (req, res) => {
   try {
     const payment = await Payment.findById(req.params.id).populate("orderId");
@@ -83,7 +83,7 @@ const getPaymentById = async (req, res) => {
   }
 };
 
-// Actualizar pago
+// Update payment
 const updatePayment = async (req, res) => {
   try {
     const updatedPayment = await Payment.findByIdAndUpdate(
@@ -101,7 +101,7 @@ const updatePayment = async (req, res) => {
   }
 };
 
-// Estadísticas de pagos
+// Payment statistics
 const getPaymentStats = async (req, res) => {
   try {
     const from = new Date(req.query.from);
@@ -132,7 +132,7 @@ const getPaymentStats = async (req, res) => {
   }
 };
 
-// Exportar pagos a Excel
+// Export payments to Excel
 const exportPaymentsToExcel = async (req, res) => {
   try {
     const from = new Date(req.query.from);
@@ -180,7 +180,7 @@ const exportPaymentsToExcel = async (req, res) => {
   }
 };
 
-// Eliminar pago
+// Delete payment
 const deletePayment = async (req, res) => {
   try {
     const payment = await Payment.findById(req.params.id);

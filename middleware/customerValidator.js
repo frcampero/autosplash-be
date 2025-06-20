@@ -1,4 +1,3 @@
-// middleware/customerValidator.js
 const { body } = require('express-validator');
 
 const validateCustomer = [

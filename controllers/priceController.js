@@ -1,4 +1,3 @@
-// controllers/priceController.js
 const PriceItem = require("../models/PriceItem");
 
 const getPrices = async (req, res) => {

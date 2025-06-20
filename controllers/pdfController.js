@@ -2,8 +2,7 @@ const PDFDocument = require("pdfkit");
 const QRCode = require("qrcode");
 const Order = require("../models/Order");
 const Payment = require("../models/Payment");
-const path = require("path"); // necesario para ruta local del logo
-
+const path = require("path");
 const FRONTEND_BASE_URL =
   process.env.FRONTEND_BASE_URL || "http://localhost:5173";
 const generateOrderPdf = async (req, res) => {
@@ -27,11 +26,11 @@ const generateOrderPdf = async (req, res) => {
     );
     doc.pipe(res);
 
-    // Encabezado
+    // Header
     doc.fontSize(18).text("Lavandería Autosplash", { align: "center" });
     doc.moveDown();
 
-    // Info del pedido
+    // Order info
     doc.fontSize(12).text(`Ticket Nº: ${order._id}`);
     doc.text(
       `Cliente: ${order.customerId.firstName} ${order.customerId.lastName}`
@@ -48,7 +47,7 @@ const generateOrderPdf = async (req, res) => {
     );
     doc.moveDown();
 
-    // Pagos
+    // Payments
     doc.font("Helvetica-Bold").text("Pagos realizados:");
     doc.font("Helvetica");
 
@@ -70,7 +69,7 @@ const generateOrderPdf = async (req, res) => {
     doc.text(`Saldo pendiente: $${balance}`);
     doc.moveDown();
 
-    // QR y link
+    // QR & link
     doc.image(qrDataURL, {
       fit: [100, 100],
       align: "center",
@@ -90,7 +89,7 @@ const generateOrderPdf = async (req, res) => {
       underline: true,
     });
 
-    // Pie de página con logo
+    // Footer
     const logoPath = path.join(
       __dirname,
       "../assets/imagotipo claro + frase.png"
