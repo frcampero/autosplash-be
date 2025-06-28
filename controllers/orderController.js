@@ -227,28 +227,29 @@ const getDelayedOrders = async (req, res) => {
       {
         $match: {
           createdAt: { $lte: limiteFecha },
-          status: { $nin: ["Completado", "Entregado"] }
-        }
+          status: { $nin: ["Completado", "Entregado"] },
+        },
       },
       {
         $lookup: {
           from: "customers",
           localField: "customerId",
           foreignField: "_id",
-          as: "cliente"
-        }
+          as: "cliente",
+        },
       },
       { $unwind: "$cliente" },
       {
         $project: {
+          _id: 1,
           nombre: {
-            $concat: ["$cliente.firstName", " ", "$cliente.lastName"]
+            $concat: ["$cliente.firstName", " ", "$cliente.lastName"],
           },
           estado: "$status",
-          fecha: "$createdAt"
-        }
+          fecha: "$createdAt",
+        },
       },
-      { $sort: { createdAt: 1 } }
+      { $sort: { createdAt: 1 } },
     ]);
 
     res.json(atrasadas);
@@ -256,7 +257,6 @@ const getDelayedOrders = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
-
 
 module.exports = {
   createOrder,

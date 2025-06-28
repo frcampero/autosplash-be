@@ -27,11 +27,12 @@ const createCustomer = async (req, res) => {
 const getCustomers = async (req, res) => {
   try {
     const customers = await Customer.find().sort({ createdAt: -1 });
-    res.json(customers);
+    res.json({ results: customers }); // ✅ estructura esperada por el frontend
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
+
 
 // Get customer by ID
 const getCustomerById = async (req, res) => {
