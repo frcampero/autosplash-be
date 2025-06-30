@@ -258,6 +258,18 @@ const getDelayedOrders = async (req, res) => {
   }
 };
 
+const getOrdersByCustomer = async (req, res) => {
+  try {
+    const customerId = req.params.id;
+    const orders = await Order.find({ customerId }).sort({ createdAt: -1 });
+
+    res.json(orders);
+  } catch (err) {
+    console.error("Error al obtener tickets del cliente:", err);
+    res.status(500).json({ error: "Error al obtener tickets" });
+  }
+};
+
 module.exports = {
   createOrder,
   getOrders,
@@ -268,4 +280,5 @@ module.exports = {
   deleteOrder,
   updateOrder,
   getDelayedOrders,
+  getOrdersByCustomer,
 };

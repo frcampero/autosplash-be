@@ -1,4 +1,4 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
 const {
   createOrder,
@@ -9,22 +9,23 @@ const {
   getOrderStats,
   deleteOrder,
   updateOrder,
-  getDelayedOrders
-} = require('../controllers/orderController');
+  getDelayedOrders,
+  getOrdersByCustomer,
+} = require("../controllers/orderController");
 
-const verifyToken = require('../middleware/authMiddleware');
-const validateOrder = require('../middleware/orderValidator');
-const handleValidation = require('../middleware/handleValidation');
+const verifyToken = require("../middleware/authMiddleware");
+const validateOrder = require("../middleware/orderValidator");
+const handleValidation = require("../middleware/handleValidation");
 
-router.post('/', verifyToken, validateOrder, handleValidation, createOrder);
-router.get('/stats/dashboard', verifyToken, getOrderStats);
-router.get('/', verifyToken, getOrders);
-router.get('/delayed', verifyToken, getDelayedOrders);
-router.get('/:id', verifyToken, getOrderById);
-router.put('/:id/status', verifyToken, updateOrderStatus);
-router.put('/:id/note', verifyToken, updateOrderNote);
-router.delete('/:id', verifyToken, deleteOrder);
-router.put('/:id', verifyToken, updateOrder);
-
+router.post("/", verifyToken, validateOrder, handleValidation, createOrder);
+router.get("/stats/dashboard", verifyToken, getOrderStats);
+router.get("/", verifyToken, getOrders);
+router.get("/delayed", verifyToken, getDelayedOrders);
+router.get("/customer/:id", verifyToken, getOrdersByCustomer);
+router.get("/:id", verifyToken, getOrderById);
+router.put("/:id/status", verifyToken, updateOrderStatus);
+router.put("/:id/note", verifyToken, updateOrderNote);
+router.delete("/:id", verifyToken, deleteOrder);
+router.put("/:id", verifyToken, updateOrder);
 
 module.exports = router;

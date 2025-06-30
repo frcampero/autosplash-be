@@ -4,7 +4,6 @@ const Payment = require("../models/Payment");
 const mongoose = require("mongoose");
 const ObjectId = mongoose.Types.ObjectId;
 
-
 // Create customer
 const createCustomer = async (req, res) => {
   try {
@@ -27,12 +26,11 @@ const createCustomer = async (req, res) => {
 const getCustomers = async (req, res) => {
   try {
     const customers = await Customer.find().sort({ createdAt: -1 });
-    res.json({ results: customers }); 
+    res.json({ results: customers });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
-
 
 // Get customer by ID
 const getCustomerById = async (req, res) => {
@@ -103,8 +101,8 @@ const getTopCustomers = async (req, res) => {
           from: "orders",
           localField: "orderId",
           foreignField: "_id",
-          as: "order"
-        }
+          as: "order",
+        },
       },
       { $unwind: "$order" },
       {
@@ -112,8 +110,8 @@ const getTopCustomers = async (req, res) => {
           _id: "$order.customerId",
           montoAbonado: { $sum: "$amount" },
           cantidadPagos: { $sum: 1 },
-          ultimaFecha: { $max: "$createdAt" }
-        }
+          ultimaFecha: { $max: "$createdAt" },
+        },
       },
       { $sort: { montoAbonado: -1 } },
       { $limit: 5 },
@@ -122,20 +120,20 @@ const getTopCustomers = async (req, res) => {
           from: "customers",
           localField: "_id",
           foreignField: "_id",
-          as: "cliente"
-        }
+          as: "cliente",
+        },
       },
       { $unwind: "$cliente" },
       {
         $project: {
           nombre: {
-            $concat: ["$cliente.firstName", " ", "$cliente.lastName"]
+            $concat: ["$cliente.firstName", " ", "$cliente.lastName"],
           },
           montoAbonado: 1,
           cantidadPagos: 1,
-          ultimaFecha: 1
-        }
-      }
+          ultimaFecha: 1,
+        },
+      },
     ]);
 
     res.json(top);
@@ -144,7 +142,28 @@ const getTopCustomers = async (req, res) => {
   }
 };
 
+const getCustomerStats = async (req, res) => {
+  try {
+    const customerId = req.params.id;
+    const orders = await Order.find({ customerId });
 
+    const totalOrders = orders.length;
+    const totalSpent = orders.reduce((acc, t) => acc + (t.total || 0), 0);
+
+    const lastOrderDate = orders.length
+      ? orders.reduce(
+          (latest, t) =>
+            new Date(t.createdAt) > new Date(latest) ? t.createdAt : latest,
+          orders[0].createdAt
+        )
+      : null;
+
+    res.json({ totalOrders, totalSpent, lastOrderDate });
+  } catch (err) {
+    console.error("Error al obtener stats del cliente:", err);
+    res.status(500).json({ error: "Error al obtener estadísticas" });
+  }
+};
 
 module.exports = {
   createCustomer,
@@ -153,4 +172,5 @@ module.exports = {
   updateCustomer,
   deleteCustomer,
   getTopCustomers,
+  getCustomerStats
 };

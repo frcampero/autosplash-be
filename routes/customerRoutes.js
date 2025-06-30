@@ -6,7 +6,8 @@ const {
   getCustomerById,
   updateCustomer,
   deleteCustomer,
-  getTopCustomers
+  getTopCustomers,
+  getCustomerStats
 } = require('../controllers/customerController');
 
 const verifyToken = require('../middleware/authMiddleware');
@@ -19,5 +20,7 @@ router.get('/top', verifyToken, getTopCustomers);
 router.get('/:id', verifyToken, getCustomerById);
 router.put('/:id', verifyToken, updateCustomer);
 router.delete('/:id', verifyToken, deleteCustomer);
+router.get('/:id/stats', verifyToken, getCustomerStats);
+
 
 module.exports = router;
