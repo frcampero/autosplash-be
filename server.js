@@ -5,22 +5,27 @@ require("dotenv").config();
 
 const app = express();
 
-// CORS CONFIG: allow frontend from localhost and Vercel
-const allowedOrigins = ["http://localhost:5173", "https://autosplash-fe.vercel.app"];
+// CORS CONFIG
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://autosplash-fe.vercel.app",
+];
 
+// Apply CORS middleware
 app.use(
   cors({
-    origin: allowedOrigins,
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
   })
 );
 
-// Accept preflight (CORS) requests for all routes
-app.options("*", cors({
-  origin: allowedOrigins,
-  credentials: true,
-}));
-
+// Middleware for JSON
 app.use(express.json());
 
 // Routes
@@ -31,6 +36,11 @@ app.use("/api/public", require("./routes/publicRoutes"));
 app.use("/api/payments", require("./routes/paymentRoutes"));
 app.use("/api/pdf", require("./routes/pdfRoutes"));
 app.use("/api/prices", require("./routes/priceRoutes"));
+
+// Optional: health check route
+app.get("/ping", (req, res) => {
+  res.send("pong");
+});
 
 // MongoDB connection
 mongoose
