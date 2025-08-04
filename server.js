@@ -4,6 +4,7 @@ const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const helmet = require("helmet");
 const app = express();
+app.set("trust proxy", 1);
 const logger = require("./utils/logger");
 const requestLogger = require("./middleware/requestLogger");
 const mongoSanitize = require("express-mongo-sanitize");
