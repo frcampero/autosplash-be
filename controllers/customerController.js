@@ -3,6 +3,7 @@ const Order = require("../models/Order");
 const Payment = require("../models/Payment");
 const mongoose = require("mongoose");
 const ObjectId = mongoose.Types.ObjectId;
+const logger = require("../utils/logger");
 
 // Create customer
 const createCustomer = async (req, res) => {
@@ -16,8 +17,11 @@ const createCustomer = async (req, res) => {
       address,
     });
     await newCustomer.save();
+
+    logger.info(`Cliente creado: ${firstName} ${lastName} (${email || phone || "sin contacto"})`);
     res.status(201).json(newCustomer);
   } catch (err) {
+    logger.error(`Error al crear cliente: ${err.message}`);
     res.status(400).json({ error: err.message });
   }
 };
@@ -26,8 +30,10 @@ const createCustomer = async (req, res) => {
 const getCustomers = async (req, res) => {
   try {
     const customers = await Customer.find().sort({ createdAt: -1 });
+    logger.info(`Clientes consultados. Total: ${customers.length}`);
     res.json({ results: customers });
   } catch (err) {
+    logger.error(`Error al obtener clientes: ${err.message}`);
     res.status(500).json({ error: err.message });
   }
 };
@@ -36,10 +42,15 @@ const getCustomers = async (req, res) => {
 const getCustomerById = async (req, res) => {
   try {
     const customer = await Customer.findById(req.params.id);
-    if (!customer)
+    if (!customer) {
+      logger.warn(`Cliente no encontrado: ID ${req.params.id}`);
       return res.status(404).json({ error: "Cliente no encontrado" });
+    }
+
+    logger.info(`Cliente consultado: ID ${req.params.id}`);
     res.json(customer);
   } catch (err) {
+    logger.error(`Error al obtener cliente (ID ${req.params.id}): ${err.message}`);
     res.status(500).json({ error: err.message });
   }
 };
@@ -53,10 +64,15 @@ const updateCustomer = async (req, res) => {
       { new: true, runValidators: true }
     );
 
-    if (!updatedCustomer)
+    if (!updatedCustomer) {
+      logger.warn(`Cliente no encontrado al intentar actualizar: ID ${req.params.id}`);
       return res.status(404).json({ error: "Cliente no encontrado" });
+    }
+
+    logger.info(`Cliente actualizado: ID ${req.params.id}`);
     res.json(updatedCustomer);
   } catch (err) {
+    logger.error(`Error al actualizar cliente (ID ${req.params.id}): ${err.message}`);
     res.status(400).json({ error: err.message });
   }
 };
@@ -68,6 +84,7 @@ const deleteCustomer = async (req, res) => {
 
     const hasOrders = await Order.exists({ customerId });
     if (hasOrders) {
+      logger.warn(`No se puede eliminar cliente con pedidos: ID ${customerId}`);
       return res.status(400).json({
         error: "No se puede eliminar el cliente porque tiene pedidos asociados",
       });
@@ -75,6 +92,7 @@ const deleteCustomer = async (req, res) => {
 
     const hasPayments = await Payment.exists({ customerId });
     if (hasPayments) {
+      logger.warn(`No se puede eliminar cliente con pagos: ID ${customerId}`);
       return res.status(400).json({
         error: "No se puede eliminar el cliente porque tiene pagos asociados",
       });
@@ -82,12 +100,15 @@ const deleteCustomer = async (req, res) => {
 
     const customer = await Customer.findById(customerId);
     if (!customer) {
+      logger.warn(`Cliente no encontrado al intentar eliminar: ID ${customerId}`);
       return res.status(404).json({ error: "Cliente no encontrado" });
     }
 
     await customer.deleteOne();
+    logger.info(`Cliente eliminado correctamente: ID ${customerId}`);
     res.json({ message: "Cliente eliminado correctamente" });
   } catch (err) {
+    logger.error(`Error al eliminar cliente (ID ${req.params.id}): ${err.message}`);
     res.status(500).json({ error: err.message });
   }
 };
@@ -136,8 +157,10 @@ const getTopCustomers = async (req, res) => {
       },
     ]);
 
+    logger.info(`Consulta de clientes con más pagos: top ${top.length}`);
     res.json(top);
   } catch (err) {
+    logger.error(`Error al obtener clientes destacados: ${err.message}`);
     res.status(500).json({ error: err.message });
   }
 };
@@ -158,9 +181,10 @@ const getCustomerStats = async (req, res) => {
         )
       : null;
 
+    logger.info(`Estadísticas consultadas para cliente: ${customerId}`);
     res.json({ totalOrders, totalSpent, lastOrderDate });
   } catch (err) {
-    console.error("Error al obtener stats del cliente:", err);
+    logger.error(`Error al obtener estadísticas del cliente (${req.params.id}): ${err.message}`);
     res.status(500).json({ error: "Error al obtener estadísticas" });
   }
 };

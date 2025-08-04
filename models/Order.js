@@ -1,41 +1,51 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
 const OrderSchema = new mongoose.Schema(
   {
+    orderId: {
+      type: String,
+      required: true,
+      unique: true,
+    },
     customerId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Customer',
-      required: true
+      ref: "Customer",
+      required: true,
     },
+
     description: {
       type: String,
-      trim: true
+      trim: true,
     },
     status: {
       type: String,
-      enum: ['Recibido', 'En progreso', 'Completado', 'Entregado']
-    },
-    priority: {
-      type: String,
-      enum: ['Standard', 'Express', 'Delicado'],
-      default: 'Standard'
+      enum: ["Recibido", "En progreso", "Completado", "Entregado"],
     },
     total: {
       type: Number,
-      default: 0
+      default: 0,
     },
     paid: {
       type: Number,
-      default: 0
+      default: 0,
     },
-    note: {
+    paymentStatus: {
       type: String,
-      default: '',
-      trim: true
+      enum: ["Pagado", "Pendiente", "Parcial"],
+      default: "Pendiente",
+    },
+    deliveryType:{
+      type: String,
+      enum: ["estándar", "urgente"],
+      default: "estándar"
+    },
+    careLevel: {
+      type: String,
+      enum: ["normal", "delicado"],
+      default: "normal"
     }
   },
   { timestamps: true }
 );
 
-
-module.exports = mongoose.model('Order', OrderSchema);
+module.exports = mongoose.model("Order", OrderSchema);

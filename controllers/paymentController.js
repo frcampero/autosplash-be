@@ -1,38 +1,40 @@
 const Payment = require("../models/Payment");
 const ExcelJS = require("exceljs");
-const { recalculateOrderStatus } = require("../utils/orderUtils");
+const { recalculatePaymentStatus } = require("../utils/orderUtils");
+const logger = require("../utils/logger");
 
 // Create Payment
 const createPayment = async (req, res) => {
-  console.log("Body recibido:", req.body);
   try {
     let { amount, method, orderId } = req.body;
+    logger.info(`Intentando crear pago con datos: ${JSON.stringify(req.body)}`);
 
-    // Ensure that amount is a valid positive number
+    // Validar y convertir amount
     const parsedAmount = parseFloat(
       String(amount).toString().replace(",", ".")
     );
 
     if (isNaN(parsedAmount) || parsedAmount <= 0 || parsedAmount > 100000) {
+      logger.warn(`Monto inválido: ${amount}`);
       return res.status(400).json({ error: "Monto inválido o fuera de rango" });
     }
 
-    amount = Math.abs(parsedAmount); // Forzamos a positivo por seguridad
+    amount = Math.abs(parsedAmount);
 
     // Validar orderId
     if (!orderId || typeof orderId !== "string" || orderId.length !== 24) {
+      logger.warn(`orderId inválido: ${orderId}`);
       return res.status(400).json({ error: "orderId inválido" });
     }
 
-    console.log("Creando pago con:", { amount, method, orderId });
-
     const newPayment = new Payment({ amount, method, orderId });
     await newPayment.save();
-    await recalculateOrderStatus(orderId);
+    await recalculatePaymentStatus(orderId);
 
+    logger.info(`Pago creado exitosamente: $${amount}, método ${method}, orden ${orderId}`);
     res.status(201).json(newPayment);
   } catch (err) {
-    console.error("Error al guardar pago:", err);
+    logger.error(`Error al guardar pago: ${err.message}`);
     res.status(400).json({ error: err.message });
   }
 };
@@ -41,6 +43,7 @@ const createPayment = async (req, res) => {
 const getPayments = async (req, res) => {
   try {
     const { method, orderId, from, to, limit = 20, skip = 0 } = req.query;
+    logger.info(`Consultando lista de pagos con filtros: ${JSON.stringify(req.query)}`);
 
     const filters = {};
     if (method) filters.method = method;
@@ -64,21 +67,28 @@ const getPayments = async (req, res) => {
 
     const total = await Payment.countDocuments(filters);
 
+    logger.info(`Se encontraron ${payments.length} pagos (total: ${total})`);
     res.json({ total, results: payments });
   } catch (err) {
+    logger.error(`Error al obtener pagos: ${err.message}`);
     res.status(500).json({ error: err.message });
   }
 };
 
-// Get paid by ID
+// Get payment by ID
 const getPaymentById = async (req, res) => {
   try {
     const payment = await Payment.findById(req.params.id).populate("orderId");
 
-    if (!payment) return res.status(404).json({ error: "Payment not found" });
+    if (!payment) {
+      logger.warn(`Pago no encontrado: ID ${req.params.id}`);
+      return res.status(404).json({ error: "Payment not found" });
+    }
 
+    logger.info(`Pago consultado: ID ${req.params.id}`);
     res.json(payment);
   } catch (err) {
+    logger.error(`Error al obtener pago por ID (${req.params.id}): ${err.message}`);
     res.status(500).json({ error: err.message });
   }
 };
@@ -92,11 +102,15 @@ const updatePayment = async (req, res) => {
       { new: true, runValidators: true }
     );
 
-    if (!updatedPayment)
+    if (!updatedPayment) {
+      logger.warn(`Intento de actualización fallido: pago no encontrado (ID ${req.params.id})`);
       return res.status(404).json({ error: "Payment not found" });
+    }
 
+    logger.info(`Pago actualizado: ID ${req.params.id}`);
     res.json(updatedPayment);
   } catch (err) {
+    logger.error(`Error al actualizar pago (ID ${req.params.id}): ${err.message}`);
     res.status(400).json({ error: err.message });
   }
 };
@@ -120,6 +134,7 @@ const getPaymentStats = async (req, res) => {
       byMethod[p.method] = (byMethod[p.method] || 0) + 1;
     });
 
+    logger.info(`Estadísticas de pagos consultadas desde ${req.query.from} hasta ${req.query.to}`);
     res.json({
       from: from.toISOString().split("T")[0],
       to: to.toISOString().split("T")[0],
@@ -128,6 +143,7 @@ const getPaymentStats = async (req, res) => {
       paymentsByMethod: byMethod,
     });
   } catch (err) {
+    logger.error(`Error al obtener estadísticas de pagos: ${err.message}`);
     res.status(500).json({ error: err.message });
   }
 };
@@ -175,7 +191,10 @@ const exportPaymentsToExcel = async (req, res) => {
 
     await workbook.xlsx.write(res);
     res.end();
+
+    logger.info(`Pagos exportados a Excel: ${payments.length} registros desde ${req.query.from} hasta ${req.query.to}`);
   } catch (err) {
+    logger.error(`Error al exportar pagos a Excel: ${err.message}`);
     res.status(500).json({ error: err.message });
   }
 };
@@ -184,16 +203,22 @@ const exportPaymentsToExcel = async (req, res) => {
 const deletePayment = async (req, res) => {
   try {
     const payment = await Payment.findById(req.params.id);
-    if (!payment) return res.status(404).json({ error: "Payment not found" });
+    if (!payment) {
+      logger.warn(`Intento de eliminar pago inexistente: ID ${req.params.id}`);
+      return res.status(404).json({ error: "Payment not found" });
+    }
 
     await Payment.findByIdAndDelete(req.params.id);
-    await recalculateOrderStatus(payment.orderId);
+    await recalculatePaymentStatus(payment.orderId);
 
+    logger.info(`Pago eliminado correctamente: ID ${req.params.id}, Orden: ${payment.orderId}`);
     res.json({ message: "Payment deleted successfully" });
   } catch (err) {
+    logger.error(`Error al eliminar pago (ID ${req.params.id}): ${err.message}`);
     res.status(500).json({ error: err.message });
   }
 };
+
 
 module.exports = {
   createPayment,

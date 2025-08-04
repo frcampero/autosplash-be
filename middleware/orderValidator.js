@@ -6,22 +6,38 @@ const validateOrder = [
     .withMessage("Customer ID is required"),
 
   body("description")
-    .notEmpty()
-    .withMessage("Description is required")
-    .isLength({ min: 3 })
-    .withMessage("Description must be at least 3 characters"),
+    .optional() // ← no obligatoria
+    .isString()
+    .isLength({ max: 500 })
+    .withMessage("Description must be a string (máx 500 caracteres)"),
 
   body("status")
     .isIn(["Recibido", "En progreso", "Completado", "Entregado"])
-    .withMessage("Status must be Recibido, En progreso, Completado or Entregado"),
+    .withMessage("Estado inválido"),
 
-  body("priority")
-    .isIn(["Standard", "Express", "Delicado"])
-    .withMessage("Priority must be Standard, Express or Delicado"),
+  body("deliveryType")
+    .isIn(["estándar", "urgente"])
+    .withMessage("Tipo de entrega inválido"),
+
+  body("careLevel")
+    .isIn(["normal", "delicado"])
+    .withMessage("Nivel de cuidado inválido"),
 
   body("total")
     .isFloat({ gt: 0 })
-    .withMessage("Total must be a number greater than 0"),
+    .withMessage("Total debe ser mayor a 0"),
+
+  body("paid")
+    .isFloat({ min: 0 })
+    .withMessage("Pago debe ser un número mayor o igual a 0"),
+
+  body("method")
+    .notEmpty()
+    .withMessage("Método de pago es obligatorio"),
+
+  body("items")
+    .isArray({ min: 1 })
+    .withMessage("Debe incluir al menos una prenda"),
 ];
 
 module.exports = validateOrder;

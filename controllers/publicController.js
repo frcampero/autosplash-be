@@ -1,12 +1,18 @@
 const Order = require("../models/Order");
 const Payment = require("../models/Payment");
+const logger = require("../utils/logger");
 
 const getPublicOrder = async (req, res) => {
   try {
     const order = await Order.findById(req.params.id).populate("customerId");
-    if (!order) return res.status(404).json({ error: "Order not found" });
+    if (!order) {
+      logger.warn(`Orden no encontrada: ID ${req.params.id}`);
+      return res.status(404).json({ error: "Order not found" });
+    }
 
     const payments = await Payment.find({ orderId: order._id });
+
+    logger.info(`Orden pública consultada: ID ${order._id}`);
 
     res.json({
       order: {
@@ -28,7 +34,8 @@ const getPublicOrder = async (req, res) => {
       })),
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    logger.error(`Error al obtener orden pública (ID ${req.params.id}): ${err.message}`);
+    res.status(500).json({ error: "Error en el servidor" });
   }
 };
 

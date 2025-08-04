@@ -1,15 +1,73 @@
 const Order = require("../models/Order");
 const Payment = require("../models/Payment");
-const { recalculateOrderStatus } = require("../utils/orderUtils");
+const { recalculatePaymentStatus } = require("../utils/orderUtils");
+const { nanoid } = require("nanoid");
+const { getNextSequence } = require("../utils/counterUtils");
+const { calculateTotal } = require("../utils/priceUtils");
+const PriceItem = require("../models/PriceItem");
+const logger = require("../utils/logger");
 
 //Create a new order
 const createOrder = async (req, res) => {
   try {
-    const order = new Order(req.body);
-    const saveOrder = await order.save();
-    res.status(201).json(saveOrder);
+    const nextSeq = await getNextSequence("orders");
+    const orderId = String(nextSeq).padStart(6, "0");
+
+    const rawItems = Array.isArray(req.body.items) ? req.body.items : [];
+
+    // Reconstruir ítems desde la base
+    const populatedItems = await Promise.all(
+      rawItems.map(async ({ itemId, quantity }) => {
+        const item = await PriceItem.findById(itemId);
+        if (!item) throw new Error(`Item no encontrado con ID: ${itemId}`);
+        return { item, quantity };
+      })
+    );
+
+    logger.info(`Ítems con precio reconstruidos para nueva orden: ${JSON.stringify(populatedItems.map(i => ({ name: i.item.name, quantity: i.quantity })))}`);
+
+    const total = calculateTotal(populatedItems);
+    logger.info(`Total calculado para orden: $${total}`);
+
+    const paid = parseFloat(req.body.paid) || 0;
+
+    if (populatedItems.length === 0) {
+      logger.warn("Intento de crear orden sin ítems válidos");
+      return res
+        .status(400)
+        .json({ error: "Debe incluir al menos una prenda." });
+    }
+
+    logger.info(`Creando nueva orden con datos: ${JSON.stringify(req.body)}`);
+
+    const order = new Order({
+      ...req.body,
+      orderId,
+      items: populatedItems,
+      total,
+      paid,
+    });
+
+    const savedOrder = await order.save();
+    logger.info(`Orden creada: ID ${savedOrder._id}, N° ${orderId}`);
+
+    if (paid > 0) {
+      await Payment.create({
+        orderId: savedOrder._id,
+        amount: paid,
+        method: req.body.method || "Efectivo",
+      });
+      logger.info(`Pago inicial registrado: $${paid} para orden ${savedOrder._id}`);
+    }
+
+    res.status(201).json(savedOrder);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    logger.error(`Error al crear orden: ${err.message}`);
+    logger.debug(err); // Para ver todo el error en profundidad si se habilita el nivel `debug`
+    res.status(400).json({
+      error: err?.message || "Error desconocido",
+      full: err?.errors || err,
+    });
   }
 };
 
@@ -25,6 +83,7 @@ const getOrders = async (req, res) => {
       limit = 20,
       skip = 0,
     } = req.query;
+
     const filters = {};
 
     if (status) filters.status = status;
@@ -49,11 +108,16 @@ const getOrders = async (req, res) => {
 
     const total = await Order.countDocuments(filters);
 
+    logger.info(
+      `Consulta de órdenes | Filtros: ${JSON.stringify(req.query)} | Total: ${total}`
+    );
+
     res.json({
       total,
       results: orders,
     });
   } catch (err) {
+    logger.error(`Error al obtener órdenes: ${err.message}`);
     res.status(500).json({ error: err.message });
   }
 };
@@ -68,10 +132,15 @@ const updateOrderStatus = async (req, res) => {
       { new: true }
     );
 
-    if (!updated)
+    if (!updated) {
+      logger.warn(`Intento de actualizar orden inexistente: ID ${req.params.id}`);
       return res.status(404).json({ error: "La orden no funciona" });
+    }
+
+    logger.info(`Estado de orden actualizado: ID ${req.params.id}, nuevo estado: ${status}`);
     res.json(updated);
   } catch (err) {
+    logger.error(`Error al actualizar estado de orden (ID ${req.params.id}): ${err.message}`);
     res.status(400).json({ error: err.message });
   }
 };
@@ -80,10 +149,16 @@ const updateOrderStatus = async (req, res) => {
 const getOrderById = async (req, res) => {
   try {
     const order = await Order.findById(req.params.id).populate("customerId");
-    if (!order) return res.status(404).json({ error: "Order not found" });
 
-    res.json(order); //Include intern note with all fields
+    if (!order) {
+      logger.warn(`Orden no encontrada: ID ${req.params.id}`);
+      return res.status(404).json({ error: "Order not found" });
+    }
+
+    logger.info(`Orden consultada: ID ${req.params.id}`);
+    res.json(order); //Incluye nota interna y todos los campos
   } catch (err) {
+    logger.error(`Error al obtener orden (ID ${req.params.id}): ${err.message}`);
     res.status(500).json({ error: err.message });
   }
 };
@@ -99,13 +174,18 @@ const updateOrderNote = async (req, res) => {
       { new: true }
     );
 
-    if (!updateOrder) return res.status(404).json({ error: "Order not found" });
+    if (!updateOrder) {
+      logger.warn(`Intento de actualizar nota en orden inexistente: ID ${req.params.id}`);
+      return res.status(404).json({ error: "Order not found" });
+    }
 
+    logger.info(`Nota interna actualizada para orden: ID ${req.params.id}`);
     res.json({
       message: "Note update successfully",
       order: updateOrder,
     });
   } catch (err) {
+    logger.error(`Error al actualizar nota interna (ID ${req.params.id}): ${err.message}`);
     res.status(400).json({ error: err.message });
   }
 };
@@ -139,6 +219,8 @@ const getOrderStats = async (req, res) => {
       },
     ]);
 
+    logger.info("Estadísticas de órdenes consultadas");
+
     res.json({
       totalOrders,
       todayOrders,
@@ -146,6 +228,7 @@ const getOrderStats = async (req, res) => {
       totalRevenue: payments[0]?.totalRevenue || 0,
     });
   } catch (err) {
+    logger.error(`Error al obtener estadísticas de órdenes: ${err.message}`);
     res.status(500).json({ error: err.message });
   }
 };
@@ -155,40 +238,47 @@ const deleteOrder = async (req, res) => {
   try {
     const orderId = req.params.id;
 
-    // Check if there are payments for this order
     const hasPayments = await Payment.exists({ orderId });
     if (hasPayments) {
+      logger.warn(`No se puede eliminar la orden ${orderId} porque tiene pagos asociados`);
       return res.status(400).json({
         error: "No se puede eliminar la orden porque tiene pagos asociados",
       });
     }
 
-    // If you have no payments, delete the order
     const deleted = await Order.findByIdAndDelete(orderId);
     if (!deleted) {
+      logger.warn(`Intento de eliminar orden inexistente: ID ${orderId}`);
       return res.status(404).json({ error: "Orden no encontrada" });
     }
 
+    logger.info(`Orden eliminada correctamente: ID ${orderId}`);
     res.json({ message: "Orden eliminada correctamente" });
   } catch (err) {
+    logger.error(`Error al eliminar orden (ID ${req.params.id}): ${err.message}`);
     res.status(500).json({ error: err.message });
   }
 };
-
 // Update Multiple Fields of an Order
 const updateOrder = async (req, res) => {
   try {
-    const { status, paid, note, priority } = req.body;
+    const { status, paid, note, priority, items } = req.body;
 
     const updatedFields = {};
     if (status) updatedFields.status = status;
     if (paid !== undefined) updatedFields.paid = paid;
     if (note !== undefined) updatedFields.note = note;
     if (priority) updatedFields.priority = priority;
+    if (items) {
+      updatedFields.items = items;
+      updatedFields.total = calculateTotal(items);
+    }
 
     const orderBefore = await Order.findById(req.params.id);
-    if (!orderBefore)
+    if (!orderBefore) {
+      logger.warn(`Intento de actualizar orden inexistente: ID ${req.params.id}`);
       return res.status(404).json({ error: "Orden no encontrada" });
+    }
 
     const updatedOrder = await Order.findByIdAndUpdate(
       req.params.id,
@@ -196,23 +286,28 @@ const updateOrder = async (req, res) => {
       { new: true }
     );
 
-    // Si cambió el valor de paid, registrar un nuevo pago
-    if (paid !== undefined && paid !== orderBefore.paid) {
-      const Payment = require("../models/Payment"); // asegurate de tenerlo importado
+    logger.info(`Orden actualizada: ID ${req.params.id} | Campos: ${JSON.stringify(Object.keys(updatedFields))}`);
+
+    // Si se registró un nuevo pago
+    if (paid !== undefined && paid > orderBefore.paid) {
+      const amount = paid - orderBefore.paid;
       await Payment.create({
         orderId: updatedOrder._id,
-        amount: paid - orderBefore.paid,
-        method: "Efectivo", // o podrías dejarlo configurable
+        amount,
+        method: req.body.method || "Efectivo",
       });
+      logger.info(`Nuevo pago registrado por diferencia: $${amount} para orden ${updatedOrder._id}`);
     }
 
-    // Recalcular estado si cambia el pago
-    if (paid !== undefined) {
-      await recalculateOrderStatus(updatedOrder._id);
+    // Recalcular estado si corresponde
+    if (paid !== undefined || items) {
+      await recalculatePaymentStatus(updatedOrder._id);
+      logger.info(`Estado de pago recalculado para orden: ID ${updatedOrder._id}`);
     }
 
     res.json(updatedOrder);
   } catch (err) {
+    logger.error(`Error al actualizar orden (ID ${req.params.id}): ${err.message}`);
     res.status(400).json({ error: err.message });
   }
 };
@@ -252,8 +347,10 @@ const getDelayedOrders = async (req, res) => {
       { $sort: { createdAt: 1 } },
     ]);
 
+    logger.info(`Órdenes atrasadas consultadas. Total: ${atrasadas.length}`);
     res.json(atrasadas);
   } catch (err) {
+    logger.error(`Error al obtener órdenes atrasadas: ${err.message}`);
     res.status(500).json({ error: err.message });
   }
 };
@@ -263,9 +360,10 @@ const getOrdersByCustomer = async (req, res) => {
     const customerId = req.params.id;
     const orders = await Order.find({ customerId }).sort({ createdAt: -1 });
 
+    logger.info(`Órdenes consultadas para cliente: ${customerId} | Total: ${orders.length}`);
     res.json(orders);
   } catch (err) {
-    console.error("Error al obtener tickets del cliente:", err);
+    logger.error(`Error al obtener órdenes para cliente ${req.params.id}: ${err.message}`);
     res.status(500).json({ error: "Error al obtener tickets" });
   }
 };

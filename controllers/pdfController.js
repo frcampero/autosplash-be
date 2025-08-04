@@ -3,18 +3,24 @@ const QRCode = require("qrcode");
 const Order = require("../models/Order");
 const Payment = require("../models/Payment");
 const path = require("path");
+const logger = require("../utils/logger");
+
 const FRONTEND_BASE_URL =
   process.env.FRONTEND_BASE_URL || "http://localhost:5173";
+
 const generateOrderPdf = async (req, res) => {
   try {
     const order = await Order.findById(req.params.id).populate("customerId");
-    if (!order) return res.status(404).json({ error: "Order not found" });
+    if (!order) {
+      logger.warn(`Orden no encontrada para PDF: ID ${req.params.id}`);
+      return res.status(404).json({ error: "Order not found" });
+    }
 
     const payments = await Payment.find({ orderId: order._id });
     const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
     const balance = order.total - totalPaid;
 
-    const trackingUrl = `${FRONTEND_BASE_URL}/orders/${order._id}`;
+    const trackingUrl = `${FRONTEND_BASE_URL}/lookup/${order.orderId}`;
     const qrDataURL = await QRCode.toDataURL(trackingUrl);
 
     const doc = new PDFDocument({ margin: 40 });
@@ -31,7 +37,7 @@ const generateOrderPdf = async (req, res) => {
     doc.moveDown();
 
     // Order info
-    doc.fontSize(12).text(`Ticket Nº: ${order._id}`);
+    doc.fontSize(12).text(`Ticket Nº: ${order.orderId}`);
     doc.text(
       `Cliente: ${order.customerId.firstName} ${order.customerId.lastName}`
     );
@@ -100,9 +106,19 @@ const generateOrderPdf = async (req, res) => {
       valign: "bottom",
     });
 
+    doc.moveDown(2);
+    doc
+      .fontSize(12)
+      .fillColor("black")
+      .text("¡Gracias por confiar en Autosplash!", {
+        align: "center",
+      });
+
     doc.end();
+
+    logger.info(`Comprobante PDF generado: Orden ID ${order._id}`);
   } catch (err) {
-    console.error("Error generando PDF:", err);
+    logger.error(`Error generando PDF para orden ID ${req.params.id}: ${err.message}`);
     if (!res.headersSent) {
       res.status(500).json({ error: "No se pudo generar el comprobante" });
     }
