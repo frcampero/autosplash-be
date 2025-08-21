@@ -8,6 +8,14 @@ const logger = require("../utils/logger");
 const FRONTEND_BASE_URL =
   process.env.FRONTEND_BASE_URL || "http://localhost:5173";
 
+function formatDate(date) {
+  const d = new Date(date);
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
+}
+
 const generateOrderPdf = async (req, res) => {
   try {
     const order = await Order.findById(req.params.id).populate("customerId");
@@ -32,108 +40,143 @@ const generateOrderPdf = async (req, res) => {
     );
     doc.pipe(res);
 
-// Header
-doc
-  .fontSize(22)
-  .fillColor("#2563eb") // azul corporativo
-  .font("Helvetica-Bold")
-  .text("Lavandería Autosplash", { align: "center" });
-doc.moveDown(0.5);
-doc
-  .fontSize(12)
-  .fillColor("black")
-  .font("Helvetica")
-  .text(`Ticket Nº: ${order.orderId}`, { align: "center" });
-doc.moveDown(0.5);
-doc
-  .fontSize(10)
-  .text(
-    `Cliente: ${order.customerId.firstName} ${order.customerId.lastName}\nTeléfono: ${order.customerId.phone}\nEmail: ${order.customerId.email}\nDirección: ${order.customerId.address}`,
-    { align: "center" }
-  );
-doc.moveDown();
-doc
-  .moveTo(40, doc.y)
-  .lineTo(doc.page.width - 40, doc.y)
-  .stroke("#2563eb");
-doc.moveDown();
+    // Header
+    doc
+      .fontSize(22)
+      .fillColor("#2563eb") // azul corporativo
+      .font("Helvetica-Bold")
+      .text("Lavandería Autosplash", { align: "center" });
+    doc.moveDown(0.5);
+    doc
+      .fontSize(12)
+      .fillColor("black")
+      .font("Helvetica")
+      .text(`Ticket Nº: ${order.orderId}`, { align: "center" });
+    doc.moveDown(0.5);
+    doc
+      .fontSize(10)
+      .text(
+        `Cliente: ${order.customerId.firstName} ${order.customerId.lastName}\nTeléfono: ${order.customerId.phone}\nEmail: ${order.customerId.email}\nDirección: ${order.customerId.address}`,
+        { align: "center" }
+      );
+    doc.moveDown();
+    doc
+      .moveTo(40, doc.y)
+      .lineTo(doc.page.width - 40, doc.y)
+      .stroke("#2563eb");
+    doc.moveDown();
 
-// Order info
-doc
-  .fontSize(12)
-  .font("Helvetica-Bold")
-  .fillColor("#2563eb")
-  .text("Detalles del Pedido", { align: "left" });
-doc.moveDown(0.5);
-doc
-  .fontSize(10)
-  .fillColor("black")
-  .font("Helvetica")
-  .text(`Descripción: ${order.description}`);
-doc.text(`Prioridad: ${order.priority}`);
-doc.text(`Fecha de creación: ${new Date(order.createdAt).toLocaleDateString()}`);
-doc.moveDown();
-doc
-  .moveTo(40, doc.y)
-  .lineTo(doc.page.width - 40, doc.y)
-  .stroke("#e5e7eb");
-doc.moveDown();
+    // Order info
+    doc
+      .fontSize(12)
+      .font("Helvetica-Bold")
+      .fillColor("#2563eb")
+      .text("Detalles del Pedido", { align: "left" });
+    doc.moveDown(0.5);
+    doc
+      .fontSize(10)
+      .fillColor("black")
+      .font("Helvetica")
+      .text(`Descripción: ${order.description}`);
+    doc.text(`Fecha de creación: ${formatDate(order.createdAt)}`);
+    doc.moveDown();
+    doc
+      .moveTo(40, doc.y)
+      .lineTo(doc.page.width - 40, doc.y)
+      .stroke("#e5e7eb");
+    doc.moveDown();
 
-// Payments table
-doc
-  .fontSize(12)
-  .font("Helvetica-Bold")
-  .fillColor("#2563eb")
-  .text("Pagos realizados", { align: "left" });
-doc.moveDown(0.5);
+    // Prendas incluidas
+    doc
+      .fontSize(12)
+      .font("Helvetica-Bold")
+      .fillColor("#2563eb")
+      .text("Prendas incluidas", { align: "left" });
+    doc.moveDown(0.5);
 
-if (payments.length === 0) {
-  doc.font("Helvetica").fillColor("black").text("No hay pagos registrados.");
-} else {
-  doc
-    .fontSize(10)
-    .font("Helvetica")
-    .fillColor("black");
-  doc.text("Monto      Método      Fecha");
-  payments.forEach((p) => {
-    doc.text(
-      `$${p.amount.toFixed(2)}      ${p.method}      ${new Date(p.createdAt).toLocaleDateString()}`
-    );
-  });
-}
-doc.moveDown();
-doc
-  .moveTo(40, doc.y)
-  .lineTo(doc.page.width - 40, doc.y)
-  .stroke("#e5e7eb");
-doc.moveDown();
+    if (order.items && order.items.length > 0) {
+      doc.fontSize(10).font("Helvetica").fillColor("black");
+      doc.text("Prenda      Cantidad      Precio");
+      order.items.forEach(({ item, quantity }) => {
+        doc.text(
+          `${item.name}      ${quantity}      $${(
+            item.price * quantity
+          ).toFixed(2)}`
+        );
+      });
+    } else {
+      doc
+        .font("Helvetica")
+        .fillColor("black")
+        .text("No hay prendas asociadas a esta orden.");
+    }
+    doc.moveDown();
+    doc
+      .moveTo(40, doc.y)
+      .lineTo(doc.page.width - 40, doc.y)
+      .stroke("#e5e7eb");
+    doc.moveDown();
 
-// Totales
-doc
-  .fontSize(12)
-  .font("Helvetica-Bold")
-  .fillColor("black")
-  .text(`Total del pedido: $${order.total}`, { align: "right" });
-doc.text(`Total abonado: $${totalPaid}`, { align: "right" });
-doc.text(`Saldo pendiente: $${balance}`, { align: "right" });
-doc.moveDown();
+    // Payments table
+    doc
+      .fontSize(12)
+      .font("Helvetica-Bold")
+      .fillColor("#2563eb")
+      .text("Pagos realizados", { align: "left" });
+    doc.moveDown(0.5);
 
-// QR & link
-doc.image(qrDataURL, {
-  fit: [100, 100],
-  align: "center",
-});
-doc.moveDown();
-doc
-  .fontSize(10)
-  .fillColor("black")
-  .text("Escaneá el código QR para ver el estado del pedido", { align: "center" });
-doc.moveDown();
-doc
-  .fillColor("#2563eb")
-  .font("Helvetica-Bold")
-  .text(trackingUrl, { align: "center", link: trackingUrl, underline: true });
-doc.moveDown();
+    if (payments.length === 0) {
+      doc
+        .font("Helvetica")
+        .fillColor("black")
+        .text("No hay pagos registrados.");
+    } else {
+      doc.fontSize(10).font("Helvetica").fillColor("black");
+      doc.text("Monto      Método      Fecha");
+      payments.forEach((p) => {
+        doc.text(
+          `$${p.amount.toFixed(2)}      ${p.method}      ${formatDate(
+            order.createdAt
+          )}`
+        );
+      });
+    }
+    doc.moveDown();
+    doc
+      .moveTo(40, doc.y)
+      .lineTo(doc.page.width - 40, doc.y)
+      .stroke("#e5e7eb");
+    doc.moveDown();
+
+    // Totales
+    doc
+      .fontSize(12)
+      .font("Helvetica-Bold")
+      .fillColor("black")
+      .text(`Total del pedido: $${order.total}`, { align: "right" });
+    doc.text(`Total abonado: $${totalPaid}`, { align: "right" });
+    doc.text(`Saldo pendiente: $${balance}`, { align: "right" });
+    doc.moveDown();
+
+    // QR & link
+    doc.image(qrDataURL, {
+      fit: [100, 100],
+      align: "center",
+    });
+    doc.moveDown();
+    doc
+      .fontSize(10)
+      .fillColor("black")
+      .text("Escaneá el código QR para ver el estado del pedido", {
+        align: "center",
+      });
+    doc.moveDown();
+    doc.fillColor("#2563eb").font("Helvetica-Bold").text(trackingUrl, {
+      align: "center",
+      link: trackingUrl,
+      underline: true,
+    });
+    doc.moveDown();
 
     // Footer
     const logoPath = path.join(
@@ -158,7 +201,9 @@ doc.moveDown();
 
     logger.info(`Comprobante PDF generado: Orden ID ${order._id}`);
   } catch (err) {
-    logger.error(`Error generando PDF para orden ID ${req.params.id}: ${err.message}`);
+    logger.error(
+      `Error generando PDF para orden ID ${req.params.id}: ${err.message}`
+    );
     if (!res.headersSent) {
       res.status(500).json({ error: "No se pudo generar el comprobante" });
     }
