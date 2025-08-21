@@ -20,7 +20,7 @@ const generateOrderPdf = async (req, res) => {
     const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
     const balance = order.total - totalPaid;
 
-    const trackingUrl = `${FRONTEND_BASE_URL}/lookup/${order.orderId}`;
+    const trackingUrl = `${FRONTEND_BASE_URL}/lookup/${order._id}`;
     const qrDataURL = await QRCode.toDataURL(trackingUrl);
 
     const doc = new PDFDocument({ margin: 40 });
