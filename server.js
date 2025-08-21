@@ -64,6 +64,10 @@ app.get("/ping", (req, res) => {
   res.send("pong");
 });
 
+app.get("/api/debug/cookies", (req, res) => {
+  res.json({ cookies: req.cookies });
+});
+
 // MongoDB connection
 
 mongoose
