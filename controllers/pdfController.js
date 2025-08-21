@@ -18,7 +18,9 @@ function formatDate(date) {
 
 const generateOrderPdf = async (req, res) => {
   try {
-    const order = await Order.findById(req.params.id).populate("customerId");
+    const order = await Order.findById(req.params.id)
+      .populate("customerId")
+      .populate("items.item");
     if (!order) {
       logger.warn(`Orden no encontrada para PDF: ID ${req.params.id}`);
       return res.status(404).json({ error: "Order not found" });
@@ -56,7 +58,7 @@ const generateOrderPdf = async (req, res) => {
     doc
       .fontSize(10)
       .text(
-        `Cliente: ${order.customerId.firstName} ${order.customerId.lastName}\nTeléfono: ${order.customerId.phone}\nEmail: ${order.customerId.email}\nDirección: ${order.customerId.address}`,
+        `Cliente: ${order.customerId.firstName} ${order.customerId.lastName}\nEmail: ${order.customerId.email}\nDirección: ${order.customerId.address}`,
         { align: "center" }
       );
     doc.moveDown();
@@ -87,66 +89,76 @@ const generateOrderPdf = async (req, res) => {
     doc.moveDown();
 
     // Prendas incluidas
-    doc
-      .fontSize(12)
-      .font("Helvetica-Bold")
-      .fillColor("#2563eb")
-      .text("Prendas incluidas", { align: "left" });
-    doc.moveDown(0.5);
+doc
+  .fontSize(12)
+  .font("Helvetica-Bold")
+  .fillColor("#2563eb")
+  .text("Prendas incluidas", { align: "left" });
+doc.moveDown(0.5);
 
-    if (order.items && order.items.length > 0) {
-      doc.fontSize(10).font("Helvetica").fillColor("black");
-      doc.text("Prenda      Cantidad      Precio");
-      order.items.forEach(({ item, quantity }) => {
-        doc.text(
-          `${item.name}      ${quantity}      $${(
-            item.price * quantity
-          ).toFixed(2)}`
-        );
-      });
-    } else {
-      doc
-        .font("Helvetica")
-        .fillColor("black")
-        .text("No hay prendas asociadas a esta orden.");
-    }
-    doc.moveDown();
-    doc
-      .moveTo(40, doc.y)
-      .lineTo(doc.page.width - 40, doc.y)
-      .stroke("#e5e7eb");
-    doc.moveDown();
+if (order.items && order.items.length > 0) {
+  doc.fontSize(10).font("Helvetica").fillColor("black");
+  doc.text(
+    "Prenda".padEnd(30) +
+    "Cantidad".padEnd(10) +
+    "Precio".padEnd(12)
+  );
+  order.items.forEach(({ item, quantity }) => {
+    const name = item?.name || item;
+    const price = item?.price ? `$${(item.price * quantity).toFixed(2)}` : "-";
+    doc.text(
+      String(name).padEnd(30) +
+      String(quantity).padEnd(10) +
+      String(price).padEnd(12)
+    );
+  });
+} else {
+  doc
+    .font("Helvetica")
+    .fillColor("black")
+    .text("No hay prendas asociadas a esta orden.");
+}
+doc.moveDown();
+doc
+  .moveTo(40, doc.y)
+  .lineTo(doc.page.width - 40, doc.y)
+  .stroke("#e5e7eb");
+doc.moveDown();
 
     // Payments table
-    doc
-      .fontSize(12)
-      .font("Helvetica-Bold")
-      .fillColor("#2563eb")
-      .text("Pagos realizados", { align: "left" });
-    doc.moveDown(0.5);
+doc
+  .fontSize(12)
+  .font("Helvetica-Bold")
+  .fillColor("#2563eb")
+  .text("Pagos realizados", { align: "left" });
+doc.moveDown(0.5);
 
-    if (payments.length === 0) {
-      doc
-        .font("Helvetica")
-        .fillColor("black")
-        .text("No hay pagos registrados.");
-    } else {
-      doc.fontSize(10).font("Helvetica").fillColor("black");
-      doc.text("Monto      Método      Fecha");
-      payments.forEach((p) => {
-        doc.text(
-          `$${p.amount.toFixed(2)}      ${p.method}      ${formatDate(
-            order.createdAt
-          )}`
-        );
-      });
-    }
-    doc.moveDown();
-    doc
-      .moveTo(40, doc.y)
-      .lineTo(doc.page.width - 40, doc.y)
-      .stroke("#e5e7eb");
-    doc.moveDown();
+if (payments.length === 0) {
+  doc
+    .font("Helvetica")
+    .fillColor("black")
+    .text("No hay pagos registrados.");
+} else {
+  doc.fontSize(10).font("Helvetica").fillColor("black");
+  doc.text(
+    "Monto".padEnd(12) +
+    "Método".padEnd(15) +
+    "Fecha".padEnd(12)
+  );
+  payments.forEach((p) => {
+    doc.text(
+      `$${p.amount.toFixed(2)}`.padEnd(12) +
+      p.method.padEnd(15) +
+      formatDate(p.createdAt).padEnd(12)
+    );
+  });
+}
+doc.moveDown();
+doc
+  .moveTo(40, doc.y)
+  .lineTo(doc.page.width - 40, doc.y)
+  .stroke("#e5e7eb");
+doc.moveDown();
 
     // Totales
     doc
