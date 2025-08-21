@@ -32,68 +32,108 @@ const generateOrderPdf = async (req, res) => {
     );
     doc.pipe(res);
 
-    // Header
-    doc.fontSize(18).text("Lavandería Autosplash", { align: "center" });
-    doc.moveDown();
+// Header
+doc
+  .fontSize(22)
+  .fillColor("#2563eb") // azul corporativo
+  .font("Helvetica-Bold")
+  .text("Lavandería Autosplash", { align: "center" });
+doc.moveDown(0.5);
+doc
+  .fontSize(12)
+  .fillColor("black")
+  .font("Helvetica")
+  .text(`Ticket Nº: ${order.orderId}`, { align: "center" });
+doc.moveDown(0.5);
+doc
+  .fontSize(10)
+  .text(
+    `Cliente: ${order.customerId.firstName} ${order.customerId.lastName}\nTeléfono: ${order.customerId.phone}\nEmail: ${order.customerId.email}\nDirección: ${order.customerId.address}`,
+    { align: "center" }
+  );
+doc.moveDown();
+doc
+  .moveTo(40, doc.y)
+  .lineTo(doc.page.width - 40, doc.y)
+  .stroke("#2563eb");
+doc.moveDown();
 
-    // Order info
-    doc.fontSize(12).text(`Ticket Nº: ${order.orderId}`);
+// Order info
+doc
+  .fontSize(12)
+  .font("Helvetica-Bold")
+  .fillColor("#2563eb")
+  .text("Detalles del Pedido", { align: "left" });
+doc.moveDown(0.5);
+doc
+  .fontSize(10)
+  .fillColor("black")
+  .font("Helvetica")
+  .text(`Descripción: ${order.description}`);
+doc.text(`Prioridad: ${order.priority}`);
+doc.text(`Fecha de creación: ${new Date(order.createdAt).toLocaleDateString()}`);
+doc.moveDown();
+doc
+  .moveTo(40, doc.y)
+  .lineTo(doc.page.width - 40, doc.y)
+  .stroke("#e5e7eb");
+doc.moveDown();
+
+// Payments table
+doc
+  .fontSize(12)
+  .font("Helvetica-Bold")
+  .fillColor("#2563eb")
+  .text("Pagos realizados", { align: "left" });
+doc.moveDown(0.5);
+
+if (payments.length === 0) {
+  doc.font("Helvetica").fillColor("black").text("No hay pagos registrados.");
+} else {
+  doc
+    .fontSize(10)
+    .font("Helvetica")
+    .fillColor("black");
+  doc.text("Monto      Método      Fecha");
+  payments.forEach((p) => {
     doc.text(
-      `Cliente: ${order.customerId.firstName} ${order.customerId.lastName}`
+      `$${p.amount.toFixed(2)}      ${p.method}      ${new Date(p.createdAt).toLocaleDateString()}`
     );
-    doc.text(`Teléfono: ${order.customerId.phone}`);
-    doc.text(`Email: ${order.customerId.email}`);
-    doc.text(`Dirección: ${order.customerId.address}`);
-    doc.moveDown();
+  });
+}
+doc.moveDown();
+doc
+  .moveTo(40, doc.y)
+  .lineTo(doc.page.width - 40, doc.y)
+  .stroke("#e5e7eb");
+doc.moveDown();
 
-    doc.text(`Descripción: ${order.description}`);
-    doc.text(`Prioridad: ${order.priority}`);
-    doc.text(
-      `Fecha de creación: ${new Date(order.createdAt).toLocaleDateString()}`
-    );
-    doc.moveDown();
+// Totales
+doc
+  .fontSize(12)
+  .font("Helvetica-Bold")
+  .fillColor("black")
+  .text(`Total del pedido: $${order.total}`, { align: "right" });
+doc.text(`Total abonado: $${totalPaid}`, { align: "right" });
+doc.text(`Saldo pendiente: $${balance}`, { align: "right" });
+doc.moveDown();
 
-    // Payments
-    doc.font("Helvetica-Bold").text("Pagos realizados:");
-    doc.font("Helvetica");
-
-    if (payments.length === 0) {
-      doc.text("No hay pagos registrados.");
-    } else {
-      payments.forEach((p, i) => {
-        doc.text(
-          `${i + 1}. $${p.amount} - Método: ${p.method} - Fecha: ${new Date(
-            p.createdAt
-          ).toLocaleDateString()}`
-        );
-      });
-    }
-
-    doc.moveDown();
-    doc.text(`Total del pedido: $${order.total}`);
-    doc.text(`Total abonado: $${totalPaid}`);
-    doc.text(`Saldo pendiente: $${balance}`);
-    doc.moveDown();
-
-    // QR & link
-    doc.image(qrDataURL, {
-      fit: [100, 100],
-      align: "center",
-    });
-
-    doc.moveDown();
-    doc
-      .fontSize(10)
-      .text("Escaneá el código QR para ver el estado del pedido", {
-        align: "center",
-      });
-
-    doc.moveDown();
-    doc.fillColor("blue").text(trackingUrl, {
-      align: "center",
-      link: trackingUrl,
-      underline: true,
-    });
+// QR & link
+doc.image(qrDataURL, {
+  fit: [100, 100],
+  align: "center",
+});
+doc.moveDown();
+doc
+  .fontSize(10)
+  .fillColor("black")
+  .text("Escaneá el código QR para ver el estado del pedido", { align: "center" });
+doc.moveDown();
+doc
+  .fillColor("#2563eb")
+  .font("Helvetica-Bold")
+  .text(trackingUrl, { align: "center", link: trackingUrl, underline: true });
+doc.moveDown();
 
     // Footer
     const logoPath = path.join(
