@@ -14,6 +14,7 @@ require("dotenv").config();
 const allowedOrigins = [
   "http://localhost:5173",
   "https://autosplash-fe.vercel.app",
+  "https://autosplash-be-production-8f0a.up.railway.app",
 ];
 
 // Apply CORS middleware
