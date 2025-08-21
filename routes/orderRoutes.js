@@ -11,6 +11,7 @@ const {
   updateOrder,
   getDelayedOrders,
   getOrdersByCustomer,
+  getRevenueTrend
 } = require("../controllers/orderController");
 
 const Customer = require("../models/Customer");
@@ -47,7 +48,8 @@ router.get("/", verifyToken, getOrders);
 router.get("/delayed", verifyToken, getDelayedOrders);
 router.get("/customer/:id", verifyToken, getOrdersByCustomer);
 router.get("/:id", verifyToken, getOrderById);
-router.put("/:id/status", verifyToken, updateOrderStatus);
+router.get("/stats/dashboard", verifyToken, getOrderStats);
+router.get("/stats/revenue-trend", verifyToken, getRevenueTrend);
 router.put("/:id/note", verifyToken, updateOrderNote);
 router.delete("/:id", verifyToken, deleteOrder);
 

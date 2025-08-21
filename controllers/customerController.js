@@ -29,9 +29,41 @@ const createCustomer = async (req, res) => {
 // Get all customers
 const getCustomers = async (req, res) => {
   try {
-    const customers = await Customer.find().sort({ createdAt: -1 });
-    logger.info(`Clientes consultados. Total: ${customers.length}`);
-    res.json({ results: customers });
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const skip = (page - 1) * limit;
+
+    const searchTerm = req.query.search || '';
+    let query = {};
+
+    if (searchTerm) {
+      const regex = new RegExp(searchTerm, 'i'); // 'i' for case-insensitive
+      query = {
+        $or: [
+          { firstName: regex },
+          { lastName: regex },
+          { phone: regex },
+          { email: regex },
+          { address: regex },
+        ],
+      };
+    }
+
+    const totalCustomers = await Customer.countDocuments(query);
+    const totalPages = Math.ceil(totalCustomers / limit);
+
+    const customers = await Customer.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    logger.info(`Clientes consultados. Página: ${page}, Límite: ${limit}, Total: ${totalCustomers}`);
+    res.json({
+      results: customers,
+      currentPage: page,
+      totalPages,
+      totalCustomers,
+    });
   } catch (err) {
     logger.error(`Error al obtener clientes: ${err.message}`);
     res.status(500).json({ error: err.message });

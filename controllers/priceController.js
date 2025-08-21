@@ -1,6 +1,7 @@
 const PriceItem = require("../models/PriceItem");
 const logger = require("../utils/logger");
 
+// Obtener todos los precios
 const getPrices = async (req, res) => {
   try {
     const prices = await PriceItem.find();
@@ -12,44 +13,38 @@ const getPrices = async (req, res) => {
   }
 };
 
-const createOrUpdatePrice = async (req, res) => {
+// Crear un nuevo precio
+const createPrice = async (req, res) => {
   const { name, type, points, price } = req.body;
 
-  if (!name || !type || !price) {
-    logger.warn("Faltan datos requeridos al crear o actualizar precio");
-    return res.status(400).json({ error: "Faltan datos requeridos" });
+  if (!name || !type || price === undefined) {
+    logger.warn("Faltan datos requeridos al crear precio");
+    return res
+      .status(400)
+      .json({ error: "Nombre, tipo y precio son obligatorios." });
   }
 
   try {
-    const existing = await PriceItem.findOne({ name });
-
-    if (existing) {
-      existing.type = type;
-      existing.points = points;
-      existing.price = price;
-      await existing.save();
-      logger.info(`Precio actualizado: ${name}`);
-      return res.json({ message: "Precio actualizado", item: existing });
-    }
-
     const newItem = new PriceItem({ name, type, points, price });
     await newItem.save();
     logger.info(`Nuevo precio creado: ${name}`);
-    res.status(201).json({ message: "Precio creado", item: newItem });
+    res.status(201).json(newItem);
   } catch (err) {
-    logger.error(`Error al crear/actualizar precio: ${err.message}`);
-    res.status(500).json({ error: "Error al guardar precio" });
+    logger.error(`Error al crear precio: ${err.message}`);
+    res.status(500).json({ error: "Error al guardar el precio" });
   }
 };
 
+// Actualizar un precio existente por ID
 const updatePrice = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, price, points } = req.body;
+    // Asegúrate de que el tipo también se pueda actualizar
+    const { name, price, points, type } = req.body;
 
     const updated = await PriceItem.findByIdAndUpdate(
       id,
-      { name, price, points },
+      { name, price, points, type },
       { new: true }
     );
 
@@ -61,13 +56,37 @@ const updatePrice = async (req, res) => {
     logger.info(`Precio actualizado por ID: ${id}`);
     res.json(updated);
   } catch (err) {
-    logger.error(`Error al actualizar precio (ID ${req.params.id}): ${err.message}`);
+    logger.error(
+      `Error al actualizar precio (ID ${req.params.id}): ${err.message}`
+    );
     res.status(500).json({ error: "Error al actualizar precio" });
+  }
+};
+
+// Eliminar un precio por ID
+const deletePrice = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deleted = await PriceItem.findByIdAndDelete(id);
+
+    if (!deleted) {
+      logger.warn(`Intento de eliminar precio no encontrado: ID ${id}`);
+      return res.status(404).json({ error: "Precio no encontrado" });
+    }
+
+    logger.info(`Precio eliminado: ID ${id}, Nombre: ${deleted.name}`);
+    res.json({ message: "Precio eliminado correctamente" });
+  } catch (err) {
+    logger.error(
+      `Error al eliminar precio (ID ${req.params.id}): ${err.message}`
+    );
+    res.status(500).json({ error: "Error al eliminar el precio" });
   }
 };
 
 module.exports = {
   getPrices,
-  createOrUpdatePrice,
+  createPrice,
   updatePrice,
+  deletePrice,
 };

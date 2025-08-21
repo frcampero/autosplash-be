@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const mongoosePaginate = require("mongoose-paginate-v2");
 
 const OrderSchema = new mongoose.Schema(
   {
@@ -12,7 +13,20 @@ const OrderSchema = new mongoose.Schema(
       ref: "Customer",
       required: true,
     },
-
+    items: [
+      {
+        item: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "PriceItem",
+          required: true,
+        },
+        quantity: {
+          type: Number,
+          required: true,
+          min: 1,
+        },
+      },
+    ],
     description: {
       type: String,
       trim: true,
@@ -34,18 +48,20 @@ const OrderSchema = new mongoose.Schema(
       enum: ["Pagado", "Pendiente", "Parcial"],
       default: "Pendiente",
     },
-    deliveryType:{
+    deliveryType: {
       type: String,
       enum: ["estándar", "urgente"],
-      default: "estándar"
+      default: "estándar",
     },
     careLevel: {
       type: String,
       enum: ["normal", "delicado"],
-      default: "normal"
-    }
+      default: "normal",
+    },
   },
   { timestamps: true }
 );
+
+OrderSchema.plugin(mongoosePaginate);
 
 module.exports = mongoose.model("Order", OrderSchema);

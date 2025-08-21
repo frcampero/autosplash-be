@@ -2,6 +2,7 @@ const Payment = require("../models/Payment");
 const ExcelJS = require("exceljs");
 const { recalculatePaymentStatus } = require("../utils/orderUtils");
 const logger = require("../utils/logger");
+const Order = require("../models/Order");
 
 // Create Payment
 const createPayment = async (req, res) => {
@@ -9,30 +10,35 @@ const createPayment = async (req, res) => {
     let { amount, method, orderId } = req.body;
     logger.info(`Intentando crear pago con datos: ${JSON.stringify(req.body)}`);
 
-    // Validar y convertir amount
-    const parsedAmount = parseFloat(
-      String(amount).toString().replace(",", ".")
-    );
-
+    // ... (toda tu lógica de validación se queda igual)
+    const parsedAmount = parseFloat(String(amount).toString().replace(",", "."));
     if (isNaN(parsedAmount) || parsedAmount <= 0 || parsedAmount > 100000) {
       logger.warn(`Monto inválido: ${amount}`);
       return res.status(400).json({ error: "Monto inválido o fuera de rango" });
     }
-
     amount = Math.abs(parsedAmount);
-
-    // Validar orderId
     if (!orderId || typeof orderId !== "string" || orderId.length !== 24) {
       logger.warn(`orderId inválido: ${orderId}`);
       return res.status(400).json({ error: "orderId inválido" });
     }
+    // ... (fin de la lógica de validación)
 
     const newPayment = new Payment({ amount, method, orderId });
     await newPayment.save();
     await recalculatePaymentStatus(orderId);
 
+    // --- INICIO DEL CAMBIO ---
+    // Buscamos la orden actualizada y la poblamos para devolverla al frontend
+    const updatedOrder = await Order.findById(orderId)
+      .populate("items.item")
+      .populate("customerId");
+
     logger.info(`Pago creado exitosamente: $${amount}, método ${method}, orden ${orderId}`);
-    res.status(201).json(newPayment);
+    
+    // Devolvemos tanto el pago nuevo como la orden actualizada
+    res.status(201).json({ payment: newPayment, order: updatedOrder });
+    // --- FIN DEL CAMBIO ---
+
   } catch (err) {
     logger.error(`Error al guardar pago: ${err.message}`);
     res.status(400).json({ error: err.message });
@@ -199,6 +205,7 @@ const exportPaymentsToExcel = async (req, res) => {
   }
 };
 
+
 // Delete payment
 const deletePayment = async (req, res) => {
   try {
@@ -208,17 +215,27 @@ const deletePayment = async (req, res) => {
       return res.status(404).json({ error: "Payment not found" });
     }
 
+    const orderId = payment.orderId; // Guardamos el ID de la orden antes de borrar
     await Payment.findByIdAndDelete(req.params.id);
-    await recalculatePaymentStatus(payment.orderId);
+    await recalculatePaymentStatus(orderId);
 
-    logger.info(`Pago eliminado correctamente: ID ${req.params.id}, Orden: ${payment.orderId}`);
-    res.json({ message: "Payment deleted successfully" });
+    // --- INICIO DEL CAMBIO ---
+    // Buscamos la orden actualizada y la poblamos
+    const updatedOrder = await Order.findById(orderId)
+      .populate("items.item")
+      .populate("customerId");
+
+    logger.info(`Pago eliminado correctamente: ID ${req.params.id}, Orden: ${orderId}`);
+    
+    // Devolvemos un mensaje y la orden actualizada
+    res.json({ message: "Payment deleted successfully", order: updatedOrder });
+    // --- FIN DEL CAMBIO ---
+
   } catch (err) {
     logger.error(`Error al eliminar pago (ID ${req.params.id}): ${err.message}`);
     res.status(500).json({ error: err.message });
   }
 };
-
 
 module.exports = {
   createPayment,

@@ -1,9 +1,7 @@
 const { body } = require("express-validator");
 
 const validateOrder = [
-  body("customerId")
-    .notEmpty()
-    .withMessage("Customer ID is required"),
+  body("customerId").notEmpty().withMessage("Customer ID is required"),
 
   body("description")
     .optional() // ← no obligatoria
@@ -24,20 +22,16 @@ const validateOrder = [
     .withMessage("Nivel de cuidado inválido"),
 
   body("total")
-    .isFloat({ gt: 0 })
-    .withMessage("Total debe ser mayor a 0"),
+    .isFloat({ min: 0 })
+    .withMessage("Total debe ser mayor o igual a 0"),
 
   body("paid")
     .isFloat({ min: 0 })
     .withMessage("Pago debe ser un número mayor o igual a 0"),
 
-  body("method")
-    .notEmpty()
-    .withMessage("Método de pago es obligatorio"),
+  body("method").notEmpty().withMessage("Método de pago es obligatorio"),
 
-  body("items")
-    .isArray({ min: 1 })
-    .withMessage("Debe incluir al menos una prenda"),
+  body("items").isArray().withMessage("Items debe ser un array"),
 ];
 
 module.exports = validateOrder;

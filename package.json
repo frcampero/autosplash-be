@@ -25,6 +25,7 @@
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.15.2",
+    "mongoose-paginate-v2": "^1.9.1",
     "nanoid": "^3.3.11",
     "pdfkit": "^0.17.1",
     "qrcode": "^1.5.4",

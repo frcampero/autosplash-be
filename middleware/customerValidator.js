@@ -10,6 +10,7 @@ const validateCustomer = [
     .isLength({ min: 2 }).withMessage('Last name must be at least 2 characters'),
 
   body('email')
+    .optional({ checkFalsy: true })
     .isEmail().withMessage('Invalid email address'),
 
   body('phone')
