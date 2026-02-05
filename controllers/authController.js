@@ -90,4 +90,65 @@ const me = async (req, res) => {
   }
 };
 
-module.exports = { register, login, logout, me };
+const updateProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      return res.status(404).json({ error: "Usuario no encontrado" });
+    }
+    const { firstName, lastName, avatarUrl } = req.body;
+
+    if (firstName !== undefined) {
+      const v = String(firstName).trim();
+      if (!v) return res.status(400).json({ error: "El nombre no puede estar vacío" });
+      user.firstName = v;
+    }
+    if (lastName !== undefined) {
+      const v = String(lastName).trim();
+      if (!v) return res.status(400).json({ error: "El apellido no puede estar vacío" });
+      user.lastName = v;
+    }
+    if (avatarUrl !== undefined) {
+      user.avatarUrl = avatarUrl && String(avatarUrl).trim() ? String(avatarUrl).trim() : null;
+    }
+
+    await user.save();
+    const data = user.toObject();
+    delete data.password;
+    if (!data.role) data.role = "editor";
+    logger.info("Perfil actualizado: %s", user.email);
+    res.json(data);
+  } catch (err) {
+    logger.error("Error al actualizar perfil: %o", err);
+    res.status(500).json({ error: err.message || "Error al actualizar perfil" });
+  }
+};
+
+const changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: "Debes indicar la contraseña actual y la nueva" });
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: "La nueva contraseña debe tener al menos 6 caracteres" });
+    }
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      return res.status(404).json({ error: "Usuario no encontrado" });
+    }
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ error: "La contraseña actual no es correcta" });
+    }
+    user.password = newPassword;
+    await user.save();
+    logger.info("Contraseña cambiada: %s", user.email);
+    res.json({ success: true, message: "Contraseña actualizada correctamente" });
+  } catch (err) {
+    logger.error("Error al cambiar contraseña: %o", err);
+    res.status(500).json({ error: err.message || "Error al cambiar contraseña" });
+  }
+};
+
+module.exports = { register, login, logout, me, updateProfile, changePassword };
