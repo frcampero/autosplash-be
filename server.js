@@ -17,7 +17,7 @@ const allowedOrigins = [
   "https://autosplash-be-production-8f0a.up.railway.app",
 ];
 
-// Apply CORS middleware
+// Apply CORS middleware (Authorization header necesario para token desde localhost)
 app.use(
   cors({
     origin: function (origin, callback) {
@@ -28,6 +28,7 @@ app.use(
       }
     },
     credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
@@ -58,6 +59,7 @@ app.use("/api/public", require("./routes/publicRoutes"));
 app.use("/api/payments", require("./routes/paymentRoutes"));
 app.use("/api/pdf", require("./routes/pdfRoutes"));
 app.use("/api/prices", require("./routes/priceRoutes"));
+app.use("/api/users", require("./routes/userRoutes"));
 
 // Optional: health check route
 app.get("/ping", (req, res) => {

@@ -10,18 +10,25 @@ async function seedUser() {
     await mongoose.connect(process.env.MONGO_URI);
     console.log("Conectado a MongoDB");
 
-    const existing = await User.findOne({ email: DEMO_EMAIL });
-    if (existing) {
-      console.log("El usuario de prueba ya existe:", DEMO_EMAIL);
+    let user = await User.findOne({ email: DEMO_EMAIL });
+    if (user) {
+      if (!user.role) {
+        user.role = "admin";
+        await user.save();
+        console.log("Usuario actualizado con rol admin:", DEMO_EMAIL);
+      } else {
+        console.log("El usuario de prueba ya existe:", DEMO_EMAIL);
+      }
       process.exit(0);
       return;
     }
 
-    const user = new User({
+    user = new User({
       firstName: "Editor",
       lastName: "Demo",
       email: DEMO_EMAIL,
       password: DEMO_PASSWORD,
+      role: "admin",
     });
     await user.save();
     console.log("Usuario de prueba creado:", DEMO_EMAIL);

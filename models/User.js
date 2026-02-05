@@ -23,6 +23,16 @@ const UserSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  role: {
+    type: String,
+    enum: ["admin", "editor"],
+    default: "editor",
+  },
+  avatarUrl: {
+    type: String,
+    default: null,
+    trim: true,
+  },
 });
 
 // Hash password before saving

@@ -5,7 +5,8 @@
   "scripts": {
     "start": "node server.js",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "seed": "node seed/seedUser.js"
+    "seed": "node seed/seedUser.js",
+    "set-admin": "node seed/setAdmin.js"
   },
   "keywords": [],
   "author": "",

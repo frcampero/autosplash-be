@@ -41,9 +41,11 @@ const login = async (req, res) => {
       return res.status(401).json({ error: "Credenciales inválidas" });
     }
 
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
-      expiresIn: "12h",
-    });
+    const token = jwt.sign(
+      { userId: user._id, role: user.role || "editor" },
+      process.env.JWT_SECRET,
+      { expiresIn: "12h" }
+    );
 
     res.cookie("token", token, {
       httpOnly: true,
@@ -78,9 +80,10 @@ const me = async (req, res) => {
       logger.warn("Usuario no encontrado en /me con ID: %s", req.user.userId);
       return res.status(404).json({ error: "Usuario no encontrado" });
     }
-
+    const data = user.toObject();
+    if (!data.role) data.role = "editor";
     logger.info("📄 Datos del usuario recuperados: %s", user.email);
-    res.json(user);
+    res.json(data);
   } catch (err) {
     logger.error("❌ Error en /me: %o", err);
     res.status(500).json({ error: "Error del servidor" });
