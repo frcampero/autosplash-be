@@ -54,7 +54,7 @@ const login = async (req, res) => {
     });
 
     logger.info("✅ Login exitoso para %s", email);
-    res.json({ success: true });
+    res.json({ success: true, token });
   } catch (err) {
     logger.error("❌ Error en login: %o", err);
     res.status(500).json({ error: "Error al iniciar sesión" });
